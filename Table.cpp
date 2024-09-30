@@ -1,5 +1,6 @@
 #pragma once
 #include "Cell.hpp"
+#include "Table.hpp"
 #include <iostream>
 
 class Table
