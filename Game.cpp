@@ -1,102 +1,143 @@
-#pragma once
-#include "Table.hpp"
-#include <iostream>
+#include "Game.hpp"
 
-class Game
+// Constructor implicit
+Game::Game() : gameOver(false), currentPlayer(Mark::X) {}
+
+// Constructor de copiere
+Game::Game(const Game& other)
+    : board(other.board), gameOver(other.gameOver), currentPlayer(other.currentPlayer) {}
+
+// Constructor cu parametri
+Game::Game(const Table& board, bool gameOver, Mark currentPlayer)
+    : board(board), gameOver(gameOver), currentPlayer(currentPlayer) {}
+
+// Operator de copiere
+Game& Game::operator=(const Game& other)
 {
-private:
-    Table board;
+    if (this != &other)
+    {
+        board = other.board;
+        gameOver = other.gameOver;
+        currentPlayer = other.currentPlayer;
+    }
+    return *this;
+}
+
+// Operator de comparație
+bool Game::operator==(const Game& other) const
+{
+    return board == other.board &&
+           gameOver == other.gameOver &&
+           currentPlayer == other.currentPlayer;
+}
+
+// Operator de afișare
+std::ostream& operator<<(std::ostream& os, const Game& game)
+{
+    os << "Current Player: " << static_cast<int>(game.currentPlayer) << std::endl;
+    os << "Game Over: " << game.gameOver << std::endl;
+    os << game.board; // presupunând că există un operator de afișare pentru `Table`
+    return os;
+}
+
+// Operator de citire
+std::istream& operator>>(std::istream& is, Game& game)
+{
+    int currentPlayer;
     bool gameOver;
-    Mark currentPlayer;
+    is >> currentPlayer >> gameOver;
+    game.currentPlayer = static_cast<Mark>(currentPlayer);
+    game.gameOver = gameOver;
+    is >> game.board; // presupunând că există un operator de citire pentru `Table`
+    return is;
+}
 
-public:
-    Game()
+// Funcția de inițializare
+void Game::initialize()
+{
+    gameOver = false;
+    currentPlayer = Mark::X;
+}
+
+// Verificarea câștigătorului
+bool Game::hasWinner() const
+{
+    // Verificarea rândurilor
+    for (int i = 0; i < 3; ++i)
     {
-        // Initialize the game
-        initialize();
-    }
+        if (board.isCellL(i, 0)) // Dacă prima celulă este goală, continuă
+            continue;
 
-    void initialize()
-    {
-        // Set the initial state of the game (empty board, player X starts)
-        // board.initialize();
-        gameOver = false;
-        currentPlayer = Mark::X;
-    }
-
-    bool hasWinner() const
-    {
-       // Check rows for a winner
-       for (int i = 0; i < 3; ++i)
-       {
-            if (board.isCellL(i, 0))
-                continue;
-
-            if (board.getCell(i, 0) == board.getCell(i, 1) &&
-                board.getCell(i, 1) == board.getCell(i, 2))
-            {
-                return true; // Row i is a winning row
-            }
-        }
-
-        // Check columns for a winner
-        for (int j = 0; j < 3; ++j)
+        // Verifică dacă toate cele trei celule din rândul `i` sunt egale
+        if (board.getCell(i, 0) == board.getCell(i, 1) &&
+            board.getCell(i, 1) == board.getCell(i, 2))
         {
-            if (board.isCellL(0, j))
-                continue;
-
-            if (board.getCell(0, j) == board.getCell(1, j) &&
-                board.getCell(1, j) == board.getCell(2, j))
-            {
-                return true; // Column j is a winning column
-            }
+            return true; // Câștigător pe rândul `i`
         }
+    }
 
-        // Check diagonals for a winner
-        if (!board.isCellL(1, 1))
+    // Verificarea coloanelor
+    for (int j = 0; j < 3; ++j)
+    {
+        if (board.isCellL(0, j)) // Dacă prima celulă este goală, continuă
+            continue;
+
+        // Verifică dacă toate cele trei celule din coloana `j` sunt egale
+        if (board.getCell(0, j) == board.getCell(1, j) &&
+            board.getCell(1, j) == board.getCell(2, j))
         {
-            if ((board.getCell(0, 0) == board.getCell(1, 1) &&
-                board.getCell(1, 1) == board.getCell(2, 2)) ||
-                (board.getCell(0, 2) == board.getCell(1, 1) &&
-                board.getCell(1, 1) == board.getCell(2, 0)))
-            {
-                return true; // Diagonals are winning
-            }
+            return true; // Câștigător pe coloana `j`
         }
-
-        return false; // No winner found
-            // Check rows, columns, and diagonals for a winner
-            // Return true if there is a winner, otherwise false
-            // (You need to implement this logic)
     }
 
-    bool isDraw() const
+    // Verificarea diagonalelor
+    if (!board.isCellL(1, 1)) // Dacă centrul tablei nu este gol
     {
-        // Check if the board is full (no more empty cells) and there is no winner
-        return board.isFull() && !hasWinner();
-    }
-
-    void makeMove(int row, int col)
-    {
-        // Check if the move is valid and update the board
-        if (!gameOver && board.isCellL(row, col))
+        // Diagonala principală (de la stânga sus la dreapta jos)
+        if (board.getCell(0, 0) == board.getCell(1, 1) &&
+            board.getCell(1, 1) == board.getCell(2, 2))
         {
-            board.updateCell(row, col, currentPlayer);
-            if (hasWinner() || isDraw())
-                gameOver = true;
-            else
-                currentPlayer = (currentPlayer == Mark::X) ? Mark::O : Mark::X;
+            return true; // Câștigător pe diagonala principală
+        }
+
+        // Diagonala secundară (de la dreapta sus la stânga jos)
+        if (board.getCell(0, 2) == board.getCell(1, 1) &&
+            board.getCell(1, 1) == board.getCell(2, 0))
+        {
+            return true; // Câștigător pe diagonala secundară
         }
     }
 
-    Mark getCurrentPlayer() const
-    {
-        return currentPlayer;
-    }
+    return false; // Nu există câștigător
+}
 
-    void display() const
+// Verifică dacă jocul este remiză
+bool Game::isDraw() const
+{
+    return board.isFull() && !hasWinner();
+}
+
+// Efectuează o mișcare
+void Game::makeMove(int row, int col)
+{
+    if (!gameOver && board.isCellL(row, col))
     {
-        // Display the current state of the board
-        board.display();
+        board.updateCell(row, col, currentPlayer);
+        if (hasWinner() || isDraw())
+            gameOver = true;
+        else
+            currentPlayer = (currentPlayer == Mark::X) ? Mark::O : Mark::X;
     }
+}
+
+// Obține jucătorul curent
+Mark Game::getCurrentPlayer() const
+{
+    return currentPlayer;
+}
+
+// Afișează starea jocului
+void Game::display() const
+{
+    board.display();
 };
